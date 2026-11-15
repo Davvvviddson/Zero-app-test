@@ -1,11 +1,300 @@
-  } catch (err) {
-    console.error('[Zero] boot failed', err);
-    toast('Could not open local storage. Private mode may be blocking IndexedDB.');
-  }
-}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-accent="ember">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Paste a link. Zero plays it.">
+<meta name="theme-color" content="#08090c">
+<title>Zero — Paste a link. Play it.</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', boot);
-} else {
-  boot();
-}
+<header class="appbar">
+  <div class="brand">
+    <span class="dot"></span>
+    <span>Zero</span>
+    <span class="tagline">paste a link, play it</span>
+  </div>
+
+  <div class="searchwrap">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+      <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+    </svg>
+    <input id="search" type="search" placeholder="Search your library…" autocomplete="off" aria-label="Search library">
+  </div>
+
+  <div class="spacer"></div>
+
+  <button class="iconbtn primary" id="btnAdd" type="button">
+    <span class="glyph">＋</span><span class="txt">Add</span>
+  </button>
+  <button class="iconbtn" id="btnSettings" type="button" title="Settings" aria-label="Settings">⚙</button>
+</header>
+
+<main>
+
+  <!-- ============ LIBRARY ============ -->
+  <section class="view active" id="view-library">
+    <div class="controlbar">
+      <div class="tabs glass" id="catTabs" role="tablist"></div>
+      <select class="sortsel" id="sortSel" aria-label="Sort library">
+        <option value="recent">Recently added</option>
+        <option value="watched">Recently watched</option>
+        <option value="alpha">A → Z</option>
+      </select>
+      <button class="iconbtn" id="layoutBtn" type="button" title="Switch layout">
+        <span class="glyph">▦</span><span class="txt" id="layoutLbl">Net</span>
+      </button>
+    </div>
+
+    <div class="chips" id="filterChips">
+      <button class="chip" data-f="continue" type="button">Continue</button>
+      <button class="chip" data-f="cover" type="button">Has cover</button>
+      <button class="chip" data-f="week" type="button">This week</button>
+    </div>
+
+    <div id="continueSection" style="display:none">
+      <div class="sectionhead"><h2>Continue</h2><span class="sub" id="continueSub"></span></div>
+      <div class="continue-row" id="continueRow"></div>
+    </div>
+
+    <div id="gridEmpty"></div>
+    <div class="grid net" id="grid"></div>
+  </section>
+
+  <!-- ============ PLAYER ============ -->
+  <section class="view" id="view-player">
+    <div class="playerwrap" id="playerWrap">
+      <video id="video" playsinline preload="metadata"></video>
+      <div class="customctl" id="customCtl">
+        <div class="seek" id="seek"><i id="seekFill"></i></div>
+        <div class="row">
+          <button id="ccPlay" type="button" aria-label="Play or pause">▶</button>
+          <span class="tcode" id="tcode">0:00 / 0:00</span>
+          <div style="flex:1"></div>
+          <input class="vol" id="vol" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+          <button id="ccFs" type="button" aria-label="Fullscreen">⛶</button>
+        </div>
+      </div>
+    </div>
+    <div class="playerbar">
+      <div class="pinfo">
+        <div class="title" id="pTitle">—</div>
+        <div class="sub" id="pSub"></div>
+      </div>
+      <button id="btnSavePos" type="button">Save position</button>
+      <button id="btnCtlMode" type="button">Controls: Native</button>
+    </div>
+  </section>
+
+  <!-- ============ IMAGE VIEWER ============ -->
+  <section class="view" id="view-image">
+    <div class="imagewrap"><img id="imgViewer" alt=""></div>
+    <div class="playerbar standalone">
+      <div class="pinfo">
+        <div class="title" id="iTitle">—</div>
+        <div class="sub" id="iSub"></div>
+      </div>
+      <button id="btnBackFromImage" type="button">Back to library</button>
+    </div>
+  </section>
+
+  <!-- ============ READER ============ -->
+  <section class="view" id="view-reader">
+    <div class="reader" id="readerShell">
+      <div class="readerhead">
+        <div class="title" id="rTitle">—</div>
+        <button class="iconbtn" id="btnReaderWidth" type="button" title="Reader width">↔</button>
+      </div>
+      <div class="readerbody" id="readerBody"></div>
+      <div class="pager">
+        <button id="rPrev" type="button">← Prev</button>
+        <span class="pnum" id="rPnum">1 / 1</span>
+        <button id="rNext" type="button">Next →</button>
+      </div>
+      <div class="readerfoot">
+        <span id="rCat">—</span>
+        <div class="progress"><i id="rProg"></i></div>
+        <button class="iconbtn" id="btnSavePage" type="button">Save page</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FRAME (page links) ============ -->
+  <section class="view" id="view-frame">
+    <div class="framebar">
+      <div class="pinfo">
+        <div class="title" id="fTitle">—</div>
+        <div class="sub" id="fSub"></div>
+      </div>
+      <button id="btnOpenExternal" type="button">Open in browser</button>
+      <button id="btnBackFromFrame" type="button">Back</button>
+    </div>
+    <div class="framewrap">
+      <iframe id="frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" referrerpolicy="no-referrer"></iframe>
+      <div class="framenote" id="frameNote"></div>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="view" id="view-settings">
+    <div class="panel">
+      <h3>Appearance</h3>
+      <p class="desc">Theme and accent apply instantly and are remembered.</p>
+
+      <div class="rowset">
+        <div><div class="lbl">Theme</div><div class="sub">Light or dark base</div></div>
+        <div class="segmented" id="themeSeg">
+          <button data-v="dark" type="button">Dark</button>
+          <button data-v="light" type="button">Light</button>
+        </div>
+      </div>
+
+      <div class="rowset">
+        <div><div class="lbl">Accent</div><div class="sub">Highlight color across the app</div></div>
+        <div class="swatches" id="accentSwatches">
+          <button class="swatch" data-a="ember" style="background:#ff6a1f" type="button" aria-label="Ember"></button>
+          <button class="swatch" data-a="ocean" style="background:#2b8cff" type="button" aria-label="Ocean"></button>
+          <button class="swatch" data-a="violet" style="background:#8b5cf6" type="button" aria-label="Violet"></button>
+          <button class="swatch" data-a="mint" style="background:#12c48b" type="button" aria-label="Mint"></button>
+        </div>
+      </div>
+
+      <div class="rowset">
+        <div><div class="lbl">Library layout</div><div class="sub">Net rows or Cruch grid</div></div>
+        <div class="segmented" id="layoutSeg">
+          <button data-v="net" type="button">Net</button>
+          <button data-v="cruch" type="button">Cruch</button>
+        </div>
+      </div>
+
+      <div class="rowset">
+        <div><div class="lbl">Video controls</div><div class="sub">Native browser or custom glass overlay</div></div>
+        <div class="segmented" id="ctlSeg">
+          <button data-v="native" type="button">Native</button>
+          <button data-v="custom" type="button">Custom</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Data</h3>
+      <p class="desc">Everything lives on this device. Nothing is uploaded.</p>
+      <div class="rowset">
+        <div><div class="lbl">Stored items</div><div class="sub" id="statItems">0 items</div></div>
+        <button class="iconbtn" id="btnExport" type="button">Export JSON</button>
+      </div>
+      <div class="rowset">
+        <div><div class="lbl">Clear library</div><div class="sub">Removes all saved items and resume points</div></div>
+        <button class="iconbtn danger" id="btnClear" type="button">Clear</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Safety</h3>
+      <p class="desc">Zero blocks known harmful domains at the native layer in the Android build. On the web, blocked links show a warning instead.</p>
+      <div class="rowset">
+        <div><div class="lbl">Blocklist</div><div class="sub" id="statBlocked">— domains</div></div>
+        <button class="iconbtn" id="btnBlocklist" type="button">View</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Legal</h3>
+      <div class="legal-links">
+        <button class="iconbtn" data-legal="tos" type="button">Terms of Service</button>
+        <button class="iconbtn" data-legal="privacy" type="button">Privacy</button>
+        <button class="iconbtn" data-legal="dmca" type="button">DMCA</button>
+      </div>
+    </div>
+
+    <div class="panel about">
+      <h3>Zero</h3>
+      <p class="desc">A frame for media you already have a link to. Zero hosts nothing, uploads nothing, and streams nothing of its own.</p>
+      <p class="ver">Version 1.0.0</p>
+    </div>
+  </section>
+
+  <!-- ============ LEGAL ============ -->
+  <section class="view" id="view-legal">
+    <div class="panel legal" id="legalBody"></div>
+    <button class="iconbtn" id="btnBackFromLegal" type="button">← Back</button>
+  </section>
+
+</main>
+
+<!-- ============ ADD MODAL ============ -->
+<div class="modal-back" id="modalBack">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h2 id="modalTitle">Add to Zero</h2>
+    <p class="hint">Paste a direct media link or a page link. Zero displays it — it never hosts or uploads anything.</p>
+
+    <div class="field">
+      <label for="fName">Name</label>
+      <input id="fName" type="text" placeholder="e.g. My video, Chapter 1, Saved page">
+      <div class="err" id="errName"></div>
+    </div>
+
+    <div class="field">
+      <label for="fUrl">URL</label>
+      <input id="fUrl" type="url" placeholder="https://…" inputmode="url" autocomplete="off">
+      <div class="err" id="errUrl"></div>
+    </div>
+
+    <div class="field">
+      <label for="fCover">Cover URL <span class="opt">(optional)</span></label>
+      <input id="fCover" type="url" placeholder="https://…/cover.jpg" inputmode="url" autocomplete="off">
+      <div class="err" id="errCover"></div>
+    </div>
+
+    <div class="field">
+      <label for="fCat">Category</label>
+      <select id="fCat">
+        <option value="movies">Movies</option>
+        <option value="tv-shows">TV Shows</option>
+        <option value="anime">Anime</option>
+        <option value="manga">Manga</option>
+        <option value="books">Books</option>
+        <option value="comics">Comics</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="fType">Type</label>
+      <select id="fType">
+        <option value="auto">Auto-detect</option>
+        <option value="video">Video</option>
+        <option value="image">Image</option>
+        <option value="reader">Reader (manga / book / comic)</option>
+        <option value="page">Page / website</option>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button id="btnCancelAdd" type="button">Cancel</button>
+      <button id="btnConfirmAdd" class="primary" type="button">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BLOCKLIST MODAL ============ -->
+<div class="modal-back" id="blockBack">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="blockTitle">
+    <h2 id="blockTitle">Blocked domains</h2>
+    <p class="hint">Links to these domains are refused. Add one per line.</p>
+    <div class="field">
+      <textarea id="blockList" rows="10" spellcheck="false"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button id="btnCancelBlock" type="button">Cancel</button>
+      <button id="btnSaveBlock" class="primary" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+          </html>
