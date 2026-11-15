@@ -1,0 +1,11 @@
+  } catch (err) {
+    console.error('[Zero] boot failed', err);
+    toast('Could not open local storage. Private mode may be blocking IndexedDB.');
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
